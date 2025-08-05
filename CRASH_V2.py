@@ -287,6 +287,11 @@ class SamplingMachine(StateMachine):
         activate_relay(self.controller.current_tube)
         send_email("Moving On", f"Started 1-hour sampling on Tube {self.controller.current_tube+1}")
 
+        if (update_needed()):
+            self_update_and_restart()
+        else:
+            print("Good to go!")
+
     def restart_four_hour(self):
         self.controller.start_time = rtc.datetime
         activate_relay(self.controller.current_tube)
