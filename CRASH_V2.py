@@ -270,6 +270,11 @@ class SamplingMachine(StateMachine):
         send_email("Sampling Started", f"Started 1-hour sampling on Tube {self.controller.current_tube + 1}")
         self.export_state()
 
+        if (update_needed()):
+            self_update_and_restart()
+        else:
+            print("Good to go!")
+
     def on_enter_four_hour(self):
         generate_static_diagram("four_hour")
         self.controller.start_time = rtc.datetime
@@ -406,7 +411,7 @@ if __name__ == "__main__":
 
         print(rtc.datetime.tm_hour,rtc.datetime.tm_min,rtc.datetime.tm_sec)
 
-        if (time_check(daily_ping,14,36)):
+        if (time_check(daily_ping,15,10)):
             print("[INFO] Pinging now")
             send_ping()
             daily_ping = True
