@@ -23,6 +23,8 @@ import sys
 BRANCH = "main"
 REPO = "origin"
 
+print("Check for Software")
+
 i2c = busio.I2C(board.SCL, board.SDA)
 rtc = adafruit_ds3231.DS3231(i2c)
 ads = ADS.ADS1015(i2c)
