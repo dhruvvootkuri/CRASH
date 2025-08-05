@@ -16,17 +16,45 @@ from adafruit_ads1x15.analog_in import AnalogIn
 import adafruit_bme680
 from adafruit_mcp230xx.mcp23017 import MCP23017
 from digitalio import Direction
+import subprocess
+import os
+import sys
+
+BRANCH = "main"
+REPO = "origin"
 
 i2c = busio.I2C(board.SCL, board.SDA)
 rtc = adafruit_ds3231.DS3231(i2c)
 ads = ADS.ADS1015(i2c)
-sensors = [adafruit_bme680.Adafruit_BME680_I2C(i2c,address=0x77),adafruit_bme680.Adafruit_BME680_I2C(i2c,address=0x76)]
+sensors = [adafruit_bme680.Adafruit_BME680_I2C(i2c,address=0x77)]
 
 ads.gain = 1
 chan = AnalogIn(ads,ADS.P0)
 divider_ratio = 5.5453
 
 daily_ping = False
+
+def get_local_commit():
+    return subprocess.check_output(['git','rev-parse','HEAD']).decode().strip()
+
+def get_remote_commit():
+    return subprocess.check_output(['git','ls-remote',REPO,f'refs/heads/{BRANCH}']).decode().split()[0]
+
+def update_needed():
+    try:
+        local = get_local_commit()
+        remote = get_remote_commit()
+        return local != remote
+    except Exception as e:
+        print(f"[UPDATE] Error checking for updates: {e}")
+        return False
+
+def self_update_and_restart():
+    print("[UPDATE] Update detected! Pulling changes and restarting...")
+    subprocess.run(['git','pull'],check = True)
+
+    python = sys.executable
+    os.execv(python,[python]+sys.argv)
 
 def get_battery_voltage():
     try:
@@ -132,6 +160,10 @@ def send_ping():
     while (not has_internet_connection()):
         print("[INFO] Waiting for Internet connection to ping")
         time.sleep(10)
+
+    if (update_needed()):
+        self_update_and_restart()
+
     sync_rtc_to_ntp()
     body = "Readings listed: \n"
     body += (f"{get_battery_voltage():.2f} V \n\n")
@@ -201,7 +233,8 @@ class SamplingMachine(StateMachine):
     switch_to_one_hour = four_hour.to(one_hour)
     stop_sampling = one_hour.to(idle) | four_hour.to(idle)
 
-    def __init__(self):
+    def __init__(self,controller):
+        self.controller = controller
         super().__init__()
 
     def on_enter_starting_up(self):
@@ -216,6 +249,9 @@ class SamplingMachine(StateMachine):
         while not has_internet_connection():
             print("[WAITING] No internet. Retrying in 10 seconds...")
             time.sleep(10)
+
+        if update_needed():
+            self_update_and_restart()
 
         sync_rtc_to_ntp()
 
@@ -269,8 +305,7 @@ class SamplerController:
         self.current_tube = 0
         self.start_time = None
         self.next_mode = None
-        self.machine = SamplingMachine()
-        self.machine.controller = self
+        self.machine = SamplingMachine(self)
 
     def elapsed_time(self):
         #print(self.start_time)
@@ -369,12 +404,12 @@ if __name__ == "__main__":
 
         print(rtc.datetime.tm_hour,rtc.datetime.tm_min,rtc.datetime.tm_sec)
 
-        if (time_check(daily_ping,12,18)):
+        if (time_check(daily_ping,14,36)):
             print("[INFO] Pinging now")
             send_ping()
             daily_ping = True
 
-        if (time_check(False,12,17)):
+        if (time_check(False,14,39)):
             daily_ping = False
 
         controller.evaluate_thresholds(avg_15min)
