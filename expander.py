@@ -7,7 +7,7 @@ import time
 i2c = busio.I2C(board.SCL,board.SDA)
 mcp = MCP23017(i2c,0x20)
 
-solenoid_1 = mcp.get_pin(7)
+solenoid_1 = mcp.get_pin(8)
 solenoid_1.direction = Direction.OUTPUT
 
 while True:

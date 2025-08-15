@@ -1,3 +1,5 @@
+###
+
 import time
 import socket
 from collections import deque
@@ -158,7 +160,7 @@ def time_check(daily_ping,hour0,min0):
     return False
 
 def send_ping():
-    # PLACEHOLDER for turning on relay
+    relays[7].value = True
     while (not has_internet_connection()):
         print("[INFO] Waiting for Internet connection to ping")
         time.sleep(10)
@@ -202,20 +204,20 @@ def concentrationValue():
     # return bme680.temperature
 
 def generate_static_diagram(current_state):
+     pass
+#    graph = DotGraphMachine(SamplingMachine)()
+#    
+#    for node in graph.get_nodes():
+#        label = node.get_attributes().get("label","")
+#        if current_state in label:
+#            node.set_style("filled")
+#            node.set_fillcolor("yellow")
+#        else:
+#            node.set_style("solid")
+#            node.set_fillcolor("white")
 
-    graph = DotGraphMachine(SamplingMachine)()
-    
-    for node in graph.get_nodes():
-        label = node.get_attributes().get("label","")
-        if current_state in label:
-            node.set_style("filled")
-            node.set_fillcolor("yellow")
-        else:
-            node.set_style("solid")
-            node.set_fillcolor("white")
-
-    graph.write_png("fsm_static.png")
-    print("[INFO] FSM Diagram saved")
+#    graph.write_png("fsm_static.png")
+#    print("[INFO] FSM Diagram saved")
 
 
 
