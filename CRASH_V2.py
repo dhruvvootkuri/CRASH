@@ -123,8 +123,7 @@ def has_internet_connection():
     except OSError:
         return False
 
-# === I2C RELAY BOARD SETUP ===
-time.sleep(2)
+# === I2C RELAY BOARD SETUP ==
 expander = MCP23017(i2c, 0x20)
 
 relays = []
@@ -189,6 +188,7 @@ ring_buffer = deque(maxlen=RING_BUFFER_SIZE)
 ONE_HOUR_SECONDS = 15
 FOUR_HOUR_SECONDS = 30
 LOOP_WAIT_SECONDS = 1
+LOGGING_INTERVAL = 5
 
 # === SAMPLING THRESHOLDS ===
 THRESHOLD_1H = 200
@@ -199,25 +199,28 @@ def concentrationValue():
     """
     Replace this with your actual VOC sensor logic!
     """
-    return 250
+    return 150
     # return float(input("Enter simulated VOC value: "))
-    # return bme680.temperature
+    # return sensors[0].gas
 
 def generate_static_diagram(current_state):
-     pass
-#    graph = DotGraphMachine(SamplingMachine)()
-#    
-#    for node in graph.get_nodes():
-#        label = node.get_attributes().get("label","")
-#        if current_state in label:
-#            node.set_style("filled")
-#            node.set_fillcolor("yellow")
-#        else:
-#            node.set_style("solid")
-#            node.set_fillcolor("white")
 
-#    graph.write_png("fsm_static.png")
-#    print("[INFO] FSM Diagram saved")
+    print("CURRENT STATE",current_state)
+
+    graph = DotGraphMachine(SamplingMachine)()
+    
+    for node in graph.get_nodes():
+        label = node.get_attributes().get("label","")
+        if current_state in label:
+            print("FOUND")
+            node.set_style("filled")
+            node.set_fillcolor("yellow")
+        else:
+            node.set_style("solid")
+            node.set_fillcolor("white")
+
+    graph.write_png("fsm_static.png")
+    print("[INFO] FSM Diagram saved")
 
 
 
@@ -397,12 +400,30 @@ print("Starting relay sampling system (TESTING TIMINGS, REAL LOGIC)...")
 
 controller = SamplerController()
 
+def writeToLog():
+    if not (os.path.exists("data_log.csv")):
+        with open("data_log.csv","w") as f:
+            f.write("Timestamp,Temperature(C),Humidity(%),VOC(Ohms), Sampling, Tube#, Battery(V)\n")
+
+    with open("data_log.csv","a") as f:
+        now = rtc.datetime
+        f.write(f"\n{'{:04}-{:02}-{:02} {:02}:{:02}'.format(now.tm_year,now.tm_mon,now.tm_mday,now.tm_hour,now.tm_min,now.tm_sec)},{sensors[0].temperature:.2f},{sensors[0].humidity:.2f},{sensors[0].gas:.2f},{controller.machine.current_state.id},{controller.current_tube},{get_battery_voltage():.2f}")
+
 if __name__ == "__main__":
     generate_static_diagram("idle")
 
     send_ping()
+    script_start = rtc.datetime
+
+    writeToLog()
 
     while True:
+
+        log_elapsed = time.mktime(rtc.datetime) - time.mktime(script_start)
+
+        if (log_elapsed >= LOGGING_INTERVAL):
+            writeToLog()
+            script_start = rtc.datetime
 
         new_value = concentrationValue()
         ring_buffer.append(new_value)
@@ -423,7 +444,7 @@ if __name__ == "__main__":
             send_ping()
             daily_ping = True
 
-        if (time_check(False,14,39)):
+        if (time_check(False,15,13)):
             daily_ping = False
 
         controller.evaluate_thresholds(avg_15min)
